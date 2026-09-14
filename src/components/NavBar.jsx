@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function NavBar() {
@@ -11,20 +11,21 @@ export default function NavBar() {
   }
 
   return (
-    <nav style={{ display: "flex", gap: 16, padding: 12, borderBottom: "1px solid #ddd", alignItems: "center" }}>
-      <Link to="/listings">Listings</Link>
-      <Link to="/rentals">Rentals</Link>
-      <Link to="/projects">Projects</Link>
-      <Link to="/favourites">Favourites</Link>
-      <Link to="/insights">Insights</Link>
-      <div style={{ marginLeft: "auto" }}>
+    <nav className="nav">
+      <span className="nav-mark">Ivy Homes</span>
+      <NavLink to="/listings" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Listings</NavLink>
+      <NavLink to="/rentals" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Rentals</NavLink>
+      <NavLink to="/projects" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Projects</NavLink>
+      <NavLink to="/favourites" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Favourites</NavLink>
+      <NavLink to="/insights" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>Insights</NavLink>
+      <div className="nav-spacer">
         {loggedIn ? (
           <>
-            <span style={{ marginRight: 12 }}>{user?.email}</span>
-            <button onClick={handleLogout}>Log out</button>
+            <span className="nav-user">{user?.email}</span>
+            <button className="btn-logout" onClick={handleLogout}>Log out</button>
           </>
         ) : (
-          <Link to="/login">Login</Link>
+          <Link to="/login" className="nav-link">Login</Link>
         )}
       </div>
     </nav>

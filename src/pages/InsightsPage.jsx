@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllListings, getAllRentals, getAllProjects } from "../api/dataStore";
+import { ShieldAlert, Info, MapPin, BedDouble, Home } from "lucide-react";
 
 // NOTE: /v1/analytics/summary is documented but does not exist (returns 404 - see findings).
 // Everything on this screen is computed client-side from the full pulled dataset instead.
@@ -17,25 +18,19 @@ export default function InsightsPage() {
   useEffect(() => {
     (async () => {
       const [listings, rentals, projects] = await Promise.all([
-        getAllListings(),
-        getAllRentals(),
-        getAllProjects(),
+        getAllListings(), getAllRentals(), getAllProjects(),
       ]);
 
       const live = listings.filter((l) => l.is_live);
       const prices = live.map((l) => l.price).filter((p) => p > 0);
 
       const byLocality = {};
-      for (const l of live) {
-        byLocality[l.locality] = (byLocality[l.locality] || 0) + 1;
-      }
+      for (const l of live) byLocality[l.locality] = (byLocality[l.locality] || 0) + 1;
       const topLocalities = Object.entries(byLocality).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
       const byBhk = {};
       for (const l of live) byBhk[l.bedroom] = (byBhk[l.bedroom] || 0) + 1;
 
-      // Our forensic discoveries, computed live (not hardcoded) so this stays correct
-      // if the dataset changes.
       const negPrice = listings.filter((l) => l.price < 0);
       const carpetBigger = listings.filter((l) => l.carpet_area > l.super_built_up_area);
       const floorGtTotal = listings.filter((l) => l.floor > l.total_floors);
@@ -45,9 +40,7 @@ export default function InsightsPage() {
       const byContact = {};
       for (const l of listings) (byContact[l.posted_by_contact] ??= new Set()).add(l.posted_by_name);
       let fakeCount = 0;
-      for (const l of listings) {
-        if (byContact[l.posted_by_contact].size > 1) fakeCount++;
-      }
+      for (const l of listings) if (byContact[l.posted_by_contact].size > 1) fakeCount++;
 
       const liveCountByProject = {};
       for (const l of listings) if (l.is_live && l.project_id) liveCountByProject[l.project_id] = (liveCountByProject[l.project_id] || 0) + 1;
@@ -58,58 +51,81 @@ export default function InsightsPage() {
         liveListings: live.length,
         medianPrice: median(prices),
         medianPricePerSqft: median(live.map((l) => l.price / l.carpet_area)),
-        topLocalities,
-        byBhk,
+        topLocalities, byBhk,
         totalRentals: rentals.length,
         totalProjects: projects.length,
-        corruptCount,
-        fakeCount,
-        projectMismatches,
+        corruptCount, fakeCount, projectMismatches,
       });
       setLoading(false);
     })();
   }, []);
 
-  if (loading) return <p style={{ padding: 20 }}>Crunching numbers from the full dataset...</p>;
+  if (loading) return <div className="page"><p className="state-msg">Crunching numbers from the full dataset…</p></div>;
 
   return (
-    <div style={{ padding: 20, maxWidth: 700 }}>
-      <h2>Insights — Hyderabad</h2>
-      <p style={{ color: "#666", fontSize: 14 }}>
-        /v1/analytics/summary doesn't exist on the real API (documented but returns 404) —
-        everything below is computed live from the full pulled dataset instead.
-      </p>
+    <>
+      <div className="hero">
+        <h2>Insights — Hyderabad</h2>
+        <p className="sub">A market summary, computed from the full retrievable dataset.</p>
+      </div>
 
-      <h3>Market overview</h3>
-      <ul>
-        <li>Total listings retrievable: {stats.totalListings}</li>
-        <li>Active (is_live) listings: {stats.liveListings}</li>
-        <li>Median price (active listings): ₹{Math.round(stats.medianPrice).toLocaleString("en-IN")}</li>
-        <li>Median price/sqft: ₹{stats.medianPricePerSqft.toFixed(2)}</li>
-        <li>Total rentals: {stats.totalRentals}</li>
-        <li>Total projects: {stats.totalProjects}</li>
-      </ul>
+      <div className="page">
+        <div className="api-note">
+          <Info size={15} />
+          /v1/analytics/summary is documented but doesn't exist on the real API (returns 404) — everything below is computed live from the pulled dataset.
+        </div>
 
-      <h3>Top localities by active listing count</h3>
-      <ol>
-        {stats.topLocalities.map(([loc, count]) => (
-          <li key={loc}>{loc}: {count}</li>
-        ))}
-      </ol>
+        <div className="stats-row">
+          <div className="stat">
+            <span className="figure">{stats.liveListings.toLocaleString("en-IN")}</span>
+            <span className="label">active listings of {stats.totalListings.toLocaleString("en-IN")} retrievable</span>
+          </div>
+          <div className="stat">
+            <span className="figure">₹{Math.round(stats.medianPrice / 100000)}L</span>
+            <span className="label">median price, active listings</span>
+          </div>
+          <div className="stat">
+            <span className="figure">₹{stats.medianPricePerSqft.toFixed(0)}</span>
+            <span className="label">median price per sqft</span>
+          </div>
+        </div>
 
-      <h3>By bedroom count</h3>
-      <ul>
-        {Object.entries(stats.byBhk).sort().map(([bhk, count]) => (
-          <li key={bhk}>{bhk} BHK: {count}</li>
-        ))}
-      </ul>
+        <div className="section-title"><MapPin size={16} /> Top localities by active listings</div>
+        <div className="mini-list">
+          {stats.topLocalities.map(([loc, count]) => (
+            <div key={loc} className="mini-row"><span>{loc}</span><span className="n">{count}</span></div>
+          ))}
+        </div>
 
-      <h3>Data quality — what we found digging into this dataset</h3>
-      <ul>
-        <li>{stats.corruptCount} listings describe a physically impossible property (negative price, area mismatch, floor overflow, or zero-bedroom non-plot) and are excluded from price calculations above.</li>
-        <li>{stats.fakeCount} listings share a contact number that's also used under a different name — a strong signal of bait/fraudulent listings.</li>
-        <li>{stats.projectMismatches} of {stats.totalProjects} projects report a listing count that disagrees with what's actually live.</li>
-      </ul>
-    </div>
+        <div className="section-title"><BedDouble size={16} /> By bedroom count</div>
+        <div className="mini-list">
+          {Object.entries(stats.byBhk).sort().map(([bhk, count]) => (
+            <div key={bhk} className="mini-row"><span>{bhk} BHK</span><span className="n">{count}</span></div>
+          ))}
+        </div>
+
+        <div className="section-title"><Home size={16} /> Rentals &amp; projects on record</div>
+        <div className="mini-list">
+          <div className="mini-row"><span>Total rentals retrievable</span><span className="n">{stats.totalRentals.toLocaleString("en-IN")}</span></div>
+          <div className="mini-row"><span>Total projects retrievable</span><span className="n">{stats.totalProjects.toLocaleString("en-IN")}</span></div>
+        </div>
+
+        <div className="section-title"><ShieldAlert size={16} color="var(--flag)" /> Audit — what digging into this dataset found</div>
+        <div className="audit-panel">
+          <div className="audit-item">
+            <span className="d">Listings describing a physically impossible property (negative price, area mismatch, floor overflow, or zero-bedroom non-plot) — excluded from the price figures above</span>
+            <span className="n">{stats.corruptCount}</span>
+          </div>
+          <div className="audit-item">
+            <span className="d">Listings sharing a contact number also used under a different name — a signal of bait/fraudulent listings</span>
+            <span className="n">{stats.fakeCount}</span>
+          </div>
+          <div className="audit-item">
+            <span className="d">Projects whose reported listing count disagrees with what's actually live, of {stats.totalProjects}</span>
+            <span className="n">{stats.projectMismatches}</span>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
