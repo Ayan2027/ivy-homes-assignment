@@ -2,9 +2,9 @@
     "api_key": "IVY26-98A6CA1CB0CA",
     "candidate": {
         "name": "Ayan Dhal",
-        "email": "REPLACE_WITH_YOUR_MNNIT_EMAIL@mnnit.ac.in",
+        "email": "ayan.20230071@mnnit.ac.in",
         "repo_url": "https://github.com/Ayan2027/ivy-homes-assignment",
-        "demo_url": "REPLACE_WITH_YOUR_DEPLOYED_URL"
+        "demo_url": "https://ivy-homes-assignment-two-self.vercel.app/"
     },
     "answers": {
         "total_listing_records": 4400,
